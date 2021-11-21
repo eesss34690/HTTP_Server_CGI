@@ -1,20 +1,20 @@
-#ifndef _CONNECT_HPP_
-#define _CONNECT_HPP_
+#ifndef _CONNECTION_HPP_
+#define _CONNECTION_HPP_
 
 #include <memory>
 #include <set>
-#include "typedef.hpp"
+#include "single_conn.hpp"
 
 class single_conn;
 
-class connect {
+class connection {
 private:
     set<shared_ptr<single_conn>> connections_;
 public:
-    connect(const connect&) = delete;
-    connect& operator=(const connect&) = delete;
+    connection(const connection&) = delete;
+    connection& operator=(const connection&) = delete;
 
-    connect() {}
+    connection() {}
 
     void start(shared_ptr<single_conn> c);
     void stop(shared_ptr<single_conn> c);

@@ -8,23 +8,24 @@
 #include <set>
 #include <map>
 #include "typedef.hpp"
-#include "connect.hpp"
+#include "connection.hpp"
+#include "single_conn.hpp"
 #include <sys/types.h>
 #include <sys/wait.h>
 
 using boost::asio::ip::tcp;
 using namespace std;
-void connect::start(std::shared_ptr<single_conn> c)
+void connection::start(std::shared_ptr<single_conn> c)
 {
     connections_.insert(c);
     c->start();
 }
-void connect::stop(std::shared_ptr<single_conn> c)
+void connection::stop(std::shared_ptr<single_conn> c)
 {
     connections_.erase(c);
     c->stop();
 }
-void connect::stop_all(){
+void connection::stop_all(){
     for (auto &i : connections_) {
         i->stop();
     }
