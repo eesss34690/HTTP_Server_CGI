@@ -8,6 +8,7 @@
 #include <set>
 #include <map>
 #include "typedef.hpp"
+#include "connect.hpp"
 #include <sys/types.h>
 #include <sys/wait.h>
 
@@ -188,9 +189,7 @@ int main(int argc, char* argv[])
     }
 
     boost::asio::io_context io_context;
-
     server s(io_context, std::atoi(argv[1]));
-
     io_context.run();
   }
   catch (std::exception& e)
