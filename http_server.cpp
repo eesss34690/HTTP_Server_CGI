@@ -5,53 +5,32 @@
 #include <boost/asio.hpp>
 #include <set>
 #include <map>
+#include "typedef.hpp"
 
 using boost::asio::ip::tcp;
-
-class connect {
- private:
-  std::set<std::shared_ptr<single_conn>> connections_;
-  friend class single_conn;
- public:
-  connect(const connect&) = delete;
-  connect& operator=(const connect&) = delete;
-
-  connect() {}
-
-  void start(std::shared_ptr<single_conn> c)
-  {
-      connections_.insert(c);
-      c->start();
-  }
-  void stop(std::shared_ptr<single_conn> c)
-  {
-      connections_.erase(c);
-      c->stop();
-  }
-  void stop_all(){
+void connect::start(std::shared_ptr<single_conn> c)
+{
+    connections_.insert(c);
+    c->start();
+}
+void connect::stop(std::shared_ptr<single_conn> c)
+{
+    connections_.erase(c);
+    c->stop();
+}
+void connect::stop_all(){
     for (auto &i : connections_) {
         i->stop();
     }
     connections_.clear();
-  }
-};
+}
 
-class single_conn
- : public enable_shared_from_this<single_conn> {
-private:
-  boost::asio::ip::tcp::socket socket_;
-  enum { max_length = 1024 };
-  char data_[max_length], send[max_length];
-  std::map<std::string, std::string> header;
-  connect& cn_;
-  boost::asio::io_context& io_context_;
-  friend class connect;
-  void do_read()
-  {
-      auto self(shared_from_this());
-      std::string line;
-      socket_.async_read_some(
-        boost::asio::buffer(data_, max_length),
+void single_conn::do_read()
+{
+    auto self(shared_from_this());
+    std::string line;
+    socket_.async_read_some(
+    boost::asio::buffer(data_, max_length),
         [this, self](system::error_code ec, size_t length) {
             if (!ec) {
                 std::size_t pos;
@@ -91,9 +70,10 @@ private:
             } else if (ec != asio::error::operation_aborted) {
                 cn_.stop(shared_from_this());
             }
-      });
-  }
-  void HandleRequest_(bool is_good_request = true){
+        });
+}
+
+void single_conn::HandleRequest_(bool is_good_request = true){
     auto self(shared_from_this());
 
     bool is_ok = false;
@@ -167,65 +147,33 @@ private:
                 cn_.stop(self);
             }
     });
-  }
+}
 
-
-public:
-  single_conn(boost::asio::ip::tcp::socket socket,
-             connect& cn,
-             boost::asio::io_context& io_context)
-      : socket_(move(socket)),
-        cn_(cn),
-        io_context_(io_context){};
-
-  void stop() { socket_.close(); }
-  void start() { do_read(); };
-};
-
-
-class server
+void server::do_wait()
 {
-public:
-  server(boost::asio::io_context& io_context, short port)
-    : acceptor_(io_context, tcp::endpoint(tcp::v4(), port))
-    : io_context_(io_context)
-  {
-    do_wait();
-    do_accept();
-  }
-
-private:
-  void do_wait()
-  {
-      signal_.async_wait(
-      [this](const boost::system::error_code& ec, int sig) {
+    signal_.async_wait(
+    [this](const boost::system::error_code& ec, int sig) {
         if (acceptor_.is_open()) {
-          int status = 0;
-          while (waitpid(-1, &status, WNOHANG) > 0);
-          do_wait();
+            int status = 0;
+            while (waitpid(-1, &status, WNOHANG) > 0);
+            do_wait();
         }
-      });
-  }
-  void do_accept()
-  {
+    });
+}
+
+void server::do_accept()
+{
     acceptor_.async_accept(
         [this](boost::system::error_code ec, tcp::socket socket)
         {
-          if (!ec)
-          {
-            cn_.start(make_shared<Connection>(
+            if (!ec)
+            {
+                cn_.start(make_shared<Connection>(
                 move(socket), cn_, io_context_));
-          }
-          do_accept();
-        });
-  }
-
-  tcp::acceptor acceptor_;
-  boost::asio::signal_set signal_;
-  boost::asio::io_context io_context_;
-  connect cn_;
-  
-};
+            }
+            do_accept();
+    });
+}
 
 int main(int argc, char* argv[])
 {
