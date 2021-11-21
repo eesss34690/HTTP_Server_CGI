@@ -1,3 +1,6 @@
+#ifndef _TYPEDEF_HPP
+#define _TYPEDEF_HPP
+
 #include <cstdlib>
 #include <iostream>
 #include <memory>
@@ -54,3 +57,4 @@ private:
     connect cn_;
   
 };
+#endif
