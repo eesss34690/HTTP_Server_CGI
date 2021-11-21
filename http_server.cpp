@@ -3,11 +3,16 @@
 #include <memory>
 #include <utility>
 #include <boost/asio.hpp>
+#include <boost/system/error_code.hpp>
+#include <boost/filesystem.hpp>
 #include <set>
 #include <map>
 #include "typedef.hpp"
+#include <sys/types.h>
+#include <sys/wait.h>
 
 using boost::asio::ip::tcp;
+using namespace std;
 void connect::start(std::shared_ptr<single_conn> c)
 {
     connections_.insert(c);
@@ -31,20 +36,17 @@ void single_conn::do_read()
     std::string line;
     socket_.async_read_some(
     boost::asio::buffer(data_, max_length),
-        [this, self](system::error_code ec, size_t length) {
+        [this, self](boost::system::error_code ec, size_t length) {
             if (!ec) {
                 std::size_t pos;
-                getline(buffer, line, '\n');
-                if (line.empty() || line == "\r") {
-                    break; // end of headers reached
-                }
+                getline(data_, line, '\n');
                 if (line.back() == '\r') {
                     line.resize(line.size()-1);
                 }
                 header["REQUEST_METHOD"] = line.substr(0, line.find(" "));
                 header["REQUEST_URI"] = line.substr(line.find("/"), line.find("?"));
                 header["QUERY_STRING"] = line.substr(line.find("?"));
-                while (getline(buffer, line, '\n')) {
+                while (getline(data_, line, '\n')) {
                     if (line.empty() || line == "\r") {
                         break; // end of headers reached
                     }
@@ -67,7 +69,7 @@ void single_conn::do_read()
                 HandleRequest_();
                 do_read();
 
-            } else if (ec != asio::error::operation_aborted) {
+            } else if (ec != boost::asio::error::operation_aborted) {
                 cn_.stop(shared_from_this());
             }
         });
@@ -81,7 +83,7 @@ void single_conn::HandleRequest_(bool is_good_request = true){
     boost::filesystem::path execfile;
     if (is_good_request) {
         execfile = boost::filesystem::current_path() / header["REQUEST_URI"];
-        if (filesystem::is_regular_file(execfile)) {
+        if (boost::filesystem::is_regular_file(execfile)) {
         is_ok = true;
         reply_msg +=
             "HTTP/1.1 200 OK\r\n";
@@ -100,32 +102,32 @@ void single_conn::HandleRequest_(bool is_good_request = true){
 
     boost::asio::async_write(socket_, 
         boost::asio::buffer(reply_msg.c_str(), lenof reply_msg),
-        [this, self, is_ok, execfile](system::error_code ec,
+        [this, self, is_ok, execfile](boost::system::error_code ec,
                                         size_t length) {
                 if (!ec && is_ok) {
-                std::setenv("REQUEST_METHOD", header["REQUEST_METHOD"].c_str(), 1);
-                std::setenv("REQUEST_URI", header["REQUEST_URI"].c_str(), 1);
-                std::setenv("QUERY_STRING", header["QUERY_STRING"].c_str(), 1);
-                std::setenv("SERVER_PROTOCOL",
+                setenv("REQUEST_METHOD", header["REQUEST_METHOD"].c_str(), 1);
+                setenv("REQUEST_URI", header["REQUEST_URI"].c_str(), 1);
+                setenv("QUERY_STRING", header["QUERY_STRING"].c_str(), 1);
+                setenv("SERVER_PROTOCOL",
                         fmt::format("HTTP{}.{}", stoi(header["SERVER_PROTOCOL_1"]),
                                 stoi(header["SERVER_PROTOCOL_2"])).c_str(),
                         1);
-                std::setenv("HTTP_HOST", header["HTTP_HOST"].c_str(), 1);
-                std::setenv("SERVER_ADDR",
+                setenv("HTTP_HOST", header["HTTP_HOST"].c_str(), 1);
+                setenv("SERVER_ADDR",
                         socket_.local_endpoint().address().to_string().c_str(), 1);
-                std::setenv("SERVER_PORT",
+                setenv("SERVER_PORT",
                         fmt::format("{}", socket_.local_endpoint().port()).c_str(), 1);
-                std::setenv("REMOTE_ADDR",
+                setenv("REMOTE_ADDR",
                         socket_.remote_endpoint().address().to_string().c_str(), 1);
-                std::setenv("REMOTE_PORT",
+                setenv("REMOTE_PORT",
                         fmt::format("{}", socket_.remote_endpoint().port()).c_str(),
                         1);
 
-                io_context_.notify_fork(asio::io_context::fork_prepare);
+                io_context_.notify_fork(boost::asio::io_context::fork_prepare);
                 if (fork() != 0) {
-                    io_context_.notify_fork(asio::io_context::fork_parent);
+                    io_context_.notify_fork(boost::asio::io_context::fork_parent);
                 } else {
-                    io_context_.notify_fork(asio::io_context::fork_child);
+                    io_context_.notify_fork(boost::asio::io_context::fork_child);
                     int sockfd = socket_.native_handle();
                     dup2(sockfd, 0);
                     dup2(sockfd, 1);
@@ -138,12 +140,12 @@ void single_conn::HandleRequest_(bool is_good_request = true){
                                 "<h1>Execution failed</h1>\r\n";
                     }
 
-                    system::error_code ignored_ec;
-                    socket_.shutdown(asio::ip::tcp::socket::shutdown_both, ignored_ec);
+                    boost::system::error_code ignored_ec;
+                    socket_.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ignored_ec);
                 }
             }
 
-            if (ec != asio::error::operation_aborted) {
+            if (ec != boost::asio::error::operation_aborted) {
                 cn_.stop(self);
             }
     });
@@ -164,11 +166,11 @@ void server::do_wait()
 void server::do_accept()
 {
     acceptor_.async_accept(
-        [this](boost::system::error_code ec, tcp::socket socket)
+        [this](boost::system::error_code ec, boost::asio::ip::tcp::socket socket)
         {
             if (!ec)
             {
-                cn_.start(make_shared<Connection>(
+                cn_.start(make_shared<single_conn>(
                 move(socket), cn_, io_context_));
             }
             do_accept();

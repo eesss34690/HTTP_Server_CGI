@@ -34,7 +34,7 @@ private:
     connect& cn_;
     boost::asio::io_context& io_context_;
     void do_read();
-    void HandleRequest_(bool is_good_request = true);
+    void HandleRequest_(bool is_good_request);
 
 public:
     single_conn(boost::asio::ip::tcp::socket socket,
@@ -52,8 +52,8 @@ class server
 {
 public:
     server(boost::asio::io_context& io_context, short port)
-        : acceptor_(io_context, tcp::endpoint(tcp::v4(), port))
-        : io_context_(io_context)
+        : acceptor_(io_context, tcp::endpoint(tcp::v4(), port)),
+          io_context_(io_context)
     {
         do_wait();
         do_accept();
@@ -63,7 +63,7 @@ private:
     void do_wait();
     void do_accept();
 
-    tcp::acceptor acceptor_;
+    boost::asio::ip::tcp::acceptor acceptor_;
     boost::asio::signal_set signal_;
     boost::asio::io_context io_context_;
     connect cn_;
