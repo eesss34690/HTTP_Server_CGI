@@ -3,26 +3,27 @@
 #include <memory>
 #include <utility>
 #include <boost/asio.hpp>
+#include <set>
+#include <map>
 
 using boost::asio::ip::tcp;
 
-class sigle_conn;
 class connect {
  private:
-  set<shared_ptr<sigle_conn>> connections_;
-
+  std::set<std::shared_ptr<single_conn>> connections_;
+  friend class single_conn;
  public:
   connect(const connect&) = delete;
   connect& operator=(const connect&) = delete;
 
   connect() {}
 
-  void start(shared_ptr<sigle_conn> c)
+  void start(std::shared_ptr<single_conn> c)
   {
       connections_.insert(c);
       c->start();
   }
-  void stop(shared_ptr<sigle_conn> c)
+  void stop(std::shared_ptr<single_conn> c)
   {
       connections_.erase(c);
       c->stop();
@@ -35,15 +36,16 @@ class connect {
   }
 };
 
-class sigle_conn
- : public enable_shared_from_this<sigle_conn> {
+class single_conn
+ : public enable_shared_from_this<single_conn> {
 private:
   boost::asio::ip::tcp::socket socket_;
   enum { max_length = 1024 };
   char data_[max_length], send[max_length];
-  std::map<string, string> header;
+  std::map<std::string, std::string> header;
   connect& cn_;
   boost::asio::io_context& io_context_;
+  friend class connect;
   void do_read()
   {
       auto self(shared_from_this());
@@ -95,7 +97,7 @@ private:
     auto self(shared_from_this());
 
     bool is_ok = false;
-    string reply_msg;
+    std::string reply_msg;
     boost::filesystem::path execfile;
     if (is_good_request) {
         execfile = boost::filesystem::current_path() / header["REQUEST_URI"];
@@ -121,21 +123,21 @@ private:
         [this, self, is_ok, execfile](system::error_code ec,
                                         size_t length) {
                 if (!ec && is_ok) {
-                setenv("REQUEST_METHOD", header["REQUEST_METHOD"].c_str(), 1);
-                setenv("REQUEST_URI", header["REQUEST_URI"].c_str(), 1);
-                setenv("QUERY_STRING", header["QUERY_STRING"].c_str(), 1);
-                setenv("SERVER_PROTOCOL",
+                std::setenv("REQUEST_METHOD", header["REQUEST_METHOD"].c_str(), 1);
+                std::setenv("REQUEST_URI", header["REQUEST_URI"].c_str(), 1);
+                std::setenv("QUERY_STRING", header["QUERY_STRING"].c_str(), 1);
+                std::setenv("SERVER_PROTOCOL",
                         fmt::format("HTTP{}.{}", stoi(header["SERVER_PROTOCOL_1"]),
                                 stoi(header["SERVER_PROTOCOL_2"])).c_str(),
                         1);
-                setenv("HTTP_HOST", header["HTTP_HOST"].c_str(), 1);
-                setenv("SERVER_ADDR",
+                std::setenv("HTTP_HOST", header["HTTP_HOST"].c_str(), 1);
+                std::setenv("SERVER_ADDR",
                         socket_.local_endpoint().address().to_string().c_str(), 1);
-                setenv("SERVER_PORT",
+                std::setenv("SERVER_PORT",
                         fmt::format("{}", socket_.local_endpoint().port()).c_str(), 1);
-                setenv("REMOTE_ADDR",
+                std::setenv("REMOTE_ADDR",
                         socket_.remote_endpoint().address().to_string().c_str(), 1);
-                setenv("REMOTE_PORT",
+                std::setenv("REMOTE_PORT",
                         fmt::format("{}", socket_.remote_endpoint().port()).c_str(),
                         1);
 
@@ -169,7 +171,7 @@ private:
 
 
 public:
-  sigle_conn(boost::asio::ip::tcp::socket socket,
+  single_conn(boost::asio::ip::tcp::socket socket,
              connect& cn,
              boost::asio::io_context& io_context)
       : socket_(move(socket)),
