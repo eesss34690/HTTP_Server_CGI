@@ -18,9 +18,9 @@ class server
 {
 public:
     server(boost::asio::io_context& io_context, short port)
-        : acceptor_(io_context, tcp::endpoint(tcp::v4(), port)),
-          io_context_(io_context)
+        : acceptor_(io_context, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port))
     {
+        io_context_ = io_context;
         do_wait();
         do_accept();
     }

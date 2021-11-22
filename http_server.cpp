@@ -5,9 +5,10 @@
 #include <boost/asio.hpp>
 #include <boost/system/error_code.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/interprocess/streams/bufferstream.hpp>
 #include <set>
 #include <map>
-#include "typedef.hpp"
+#include "server.hpp"
 #include "connection.hpp"
 #include "single_conn.hpp"
 #include <sys/types.h>
@@ -41,14 +42,15 @@ void single_conn::do_read()
         [this, self](boost::system::error_code ec, size_t length) {
             if (!ec) {
                 std::size_t pos;
-                getline(data_, line, '\n');
+                boost::interprocess::bufferstream input(data_, lenof data_);
+                getline(input, line, '\n');
                 if (line.back() == '\r') {
                     line.resize(line.size()-1);
                 }
                 header["REQUEST_METHOD"] = line.substr(0, line.find(" "));
                 header["REQUEST_URI"] = line.substr(line.find("/"), line.find("?"));
                 header["QUERY_STRING"] = line.substr(line.find("?"));
-                while (getline(data_, line, '\n')) {
+                while (getline(input, line, '\n')) {
                     if (line.empty() || line == "\r") {
                         break; // end of headers reached
                     }
@@ -111,18 +113,18 @@ void single_conn::HandleRequest_(bool is_good_request = true){
                 setenv("REQUEST_URI", header["REQUEST_URI"].c_str(), 1);
                 setenv("QUERY_STRING", header["QUERY_STRING"].c_str(), 1);
                 setenv("SERVER_PROTOCOL",
-                        fmt::format("HTTP{}.{}", stoi(header["SERVER_PROTOCOL_1"]),
+                        boost::fmt::format("HTTP{}.{}", stoi(header["SERVER_PROTOCOL_1"]),
                                 stoi(header["SERVER_PROTOCOL_2"])).c_str(),
                         1);
                 setenv("HTTP_HOST", header["HTTP_HOST"].c_str(), 1);
                 setenv("SERVER_ADDR",
                         socket_.local_endpoint().address().to_string().c_str(), 1);
                 setenv("SERVER_PORT",
-                        fmt::format("{}", socket_.local_endpoint().port()).c_str(), 1);
+                        boost::fmt::format("{}", socket_.local_endpoint().port()).c_str(), 1);
                 setenv("REMOTE_ADDR",
                         socket_.remote_endpoint().address().to_string().c_str(), 1);
                 setenv("REMOTE_PORT",
-                        fmt::format("{}", socket_.remote_endpoint().port()).c_str(),
+                        boost::fmt::format("{}", socket_.remote_endpoint().port()).c_str(),
                         1);
 
                 io_context_.notify_fork(boost::asio::io_context::fork_prepare);

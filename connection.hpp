@@ -2,11 +2,13 @@
 #define _CONNECTION_HPP_
 
 #include <memory>
+#include <utility>
 #include <set>
 #include "single_conn.hpp"
+#include <iostream>
 
+using namespace std;
 class single_conn;
-
 class connection {
 private:
     set<shared_ptr<single_conn>> connections_;
