@@ -52,10 +52,28 @@ void single_conn::do_read()
                     line.resize(line.size()-1);
                 }
                 header["REQUEST_METHOD"] = line.substr(0, line.find(" "));
-                header["REQUEST_URI"] = line.substr(line.find("/"), line.find("?"));
-                header["QUERY_STRING"] = line.substr(line.find("?"));
+		line = line.substr(line.find("/"));
+		if ((pos = line.find(" ")) != string::npos)
+		{
+			header["REQUEST_URI"] = line.substr(line.find("/"), pos);
+			if ((pos = line.find("?")) != string::npos)
+				header["URI"] = line.substr(line.find("/"), pos);
+			else
+				header["URI"] = header["REQUEST_URI"];
+			header["SERVER_PROTOCOL"] = line.substr(line.find("H"));
+		}
+		else
+			header["REQUEST_URI"] = line.substr(line.find("/"));
+                if ((pos = header["REQUEST_URI"].find("?")) != string::npos)
+		{
+			auto pos2 = header["REQUEST_URI"].find(" ");
+			header["QUERY_STRING"] = header["REQUEST_URI"].substr(pos + 1, pos2);
+		}
+		else
+			header["QUERY_STRING"] = "";
+		cout << "QUERY: "<< header["QUERY_STRING"] << endl;
                 while (getline(input, line, '\n')) {
-                    if (line.empty() || line == "\r") {
+		    if (line.empty() || line == "\r") {
                         break; // end of headers reached
                     }
                     if (line.back() == '\r') {
@@ -64,13 +82,6 @@ void single_conn::do_read()
                     if ((pos = line.find("Host")) != std::string::npos)
                     {
                         header["HTTP_HOST"] = line.substr(6);
-                    }
-                    else if ((pos = line.find("User-Agent")) != std::string::npos)
-                    {
-                        pos = line.find("/");
-                        auto pos2 = line.find(".");
-                        header["SERVER_PROTOCOL_1"] = line.substr(pos, pos2);
-                        header["SERVER_PROTOCOL_2"] = line.substr(pos2);
                     }
                 }
 
@@ -90,8 +101,9 @@ void single_conn::HandleRequest_(bool is_good_request){
     std::string reply_msg;
     boost::filesystem::path execfile;
     if (is_good_request) {
-        execfile = boost::filesystem::current_path() / header["REQUEST_URI"];
-        if (boost::filesystem::is_regular_file(execfile)) {
+        execfile = boost::filesystem::current_path() / header["URI"];
+        cout << execfile << endl;
+	if (boost::filesystem::is_regular_file(execfile)) {
         is_ok = true;
         reply_msg +=
             "HTTP/1.1 200 OK\r\n";
@@ -114,18 +126,26 @@ void single_conn::HandleRequest_(bool is_good_request){
                                         size_t length) {
                 if (!ec && is_ok) {
                 setenv("REQUEST_METHOD", header["REQUEST_METHOD"].c_str(), 1);
+		cout << "REQUEST_METHOD" << header["REQUEST_METHOD"] << endl;
                 setenv("REQUEST_URI", header["REQUEST_URI"].c_str(), 1);
+		cout << "REQUEST_URI" << header["REQUEST_URI"] << endl;
                 setenv("QUERY_STRING", header["QUERY_STRING"].c_str(), 1);
+		cout << "QUERY_STRING" << header["QUERY_STRING"] << endl;
                 setenv("SERVER_PROTOCOL",
-                        boost::str(boost::format{"HTTP%1%.%2%"} % header["SERVER_PROTOCOL_1"]
-                                 % header["SERVER_PROTOCOL_2"]).c_str(),
+                        header["SERVER_PROTOCOL"].c_str(),
+			//boost::str(boost::format{"HTTP%1%.%2%"} % header["SERVER_PROTOCOL_1"]
+                        //         % header["SERVER_PROTOCOL_2"]).c_str(),
                         1);
+		cout <<"SERER_PROTOCOL" << header["SERVER_PROTOCOL"] << endl;
                 setenv("HTTP_HOST", header["HTTP_HOST"].c_str(), 1);
+		cout << "HTTP_HOST"<< header["HTTP_HOST"] << endl;
                 setenv("SERVER_ADDR",
                         socket_.local_endpoint().address().to_string().c_str(), 1);
-                setenv("SERVER_PORT",
+                cout << "SERVER_ADDR" << socket_.local_endpoint().address().to_string() << endl;
+		setenv("SERVER_PORT",
                         boost::str(boost::format{"%1%"} % socket_.local_endpoint().port()).c_str(), 1);
-                setenv("REMOTE_ADDR",
+                cout << "SERVER_PORT" << boost::str(boost::format{"%1%"} % socket_.local_endpoint().port()) << endl;
+		setenv("REMOTE_ADDR",
                         socket_.remote_endpoint().address().to_string().c_str(), 1);
                 setenv("REMOTE_PORT",
                         boost::str(boost::format{"%1%"} % socket_.remote_endpoint().port()).c_str(), 1);
