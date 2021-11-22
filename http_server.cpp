@@ -3,8 +3,12 @@
 #include <memory>
 #include <utility>
 #include <boost/asio.hpp>
+#include <boost/format.hpp>
 #include <boost/system/error_code.hpp>
+#define BOOST_FILESYSTEM_VERSION 3
+#define BOOST_NO_CXX11_SCOPED_ENUMS
 #include <boost/filesystem.hpp>
+#undef BOOST_NO_CXX11_SCOPED_ENUMS
 #include <boost/interprocess/streams/bufferstream.hpp>
 #include <set>
 #include <map>
@@ -36,13 +40,13 @@ void connection::stop_all(){
 void single_conn::do_read()
 {
     auto self(shared_from_this());
-    std::string line;
     socket_.async_read_some(
     boost::asio::buffer(data_, max_length),
         [this, self](boost::system::error_code ec, size_t length) {
             if (!ec) {
                 std::size_t pos;
-                boost::interprocess::bufferstream input(data_, lenof data_);
+                string line;
+                boost::interprocess::bufferstream input(data_, strlen(data_));
                 getline(input, line, '\n');
                 if (line.back() == '\r') {
                     line.resize(line.size()-1);
@@ -63,14 +67,14 @@ void single_conn::do_read()
                     }
                     else if ((pos = line.find("User-Agent")) != std::string::npos)
                     {
-                        pos = line.find("/")
-                        auto pos2 = line.find(".")
+                        pos = line.find("/");
+                        auto pos2 = line.find(".");
                         header["SERVER_PROTOCOL_1"] = line.substr(pos, pos2);
                         header["SERVER_PROTOCOL_2"] = line.substr(pos2);
                     }
                 }
 
-                HandleRequest_();
+                HandleRequest_(true);
                 do_read();
 
             } else if (ec != boost::asio::error::operation_aborted) {
@@ -79,7 +83,7 @@ void single_conn::do_read()
         });
 }
 
-void single_conn::HandleRequest_(bool is_good_request = true){
+void single_conn::HandleRequest_(bool is_good_request){
     auto self(shared_from_this());
 
     bool is_ok = false;
@@ -105,7 +109,7 @@ void single_conn::HandleRequest_(bool is_good_request = true){
     }
 
     boost::asio::async_write(socket_, 
-        boost::asio::buffer(reply_msg.c_str(), lenof reply_msg),
+        boost::asio::buffer(reply_msg.c_str(), strlen(reply_msg.c_str())),
         [this, self, is_ok, execfile](boost::system::error_code ec,
                                         size_t length) {
                 if (!ec && is_ok) {
@@ -113,19 +117,18 @@ void single_conn::HandleRequest_(bool is_good_request = true){
                 setenv("REQUEST_URI", header["REQUEST_URI"].c_str(), 1);
                 setenv("QUERY_STRING", header["QUERY_STRING"].c_str(), 1);
                 setenv("SERVER_PROTOCOL",
-                        boost::fmt::format("HTTP{}.{}", stoi(header["SERVER_PROTOCOL_1"]),
-                                stoi(header["SERVER_PROTOCOL_2"])).c_str(),
+                        boost::str(boost::format{"HTTP%1%.%2%"} % header["SERVER_PROTOCOL_1"]
+                                 % header["SERVER_PROTOCOL_2"]).c_str(),
                         1);
                 setenv("HTTP_HOST", header["HTTP_HOST"].c_str(), 1);
                 setenv("SERVER_ADDR",
                         socket_.local_endpoint().address().to_string().c_str(), 1);
                 setenv("SERVER_PORT",
-                        boost::fmt::format("{}", socket_.local_endpoint().port()).c_str(), 1);
+                        boost::str(boost::format{"%1%"} % socket_.local_endpoint().port()).c_str(), 1);
                 setenv("REMOTE_ADDR",
                         socket_.remote_endpoint().address().to_string().c_str(), 1);
                 setenv("REMOTE_PORT",
-                        boost::fmt::format("{}", socket_.remote_endpoint().port()).c_str(),
-                        1);
+                        boost::str(boost::format{"%1%"} % socket_.remote_endpoint().port()).c_str(), 1);
 
                 io_context_.notify_fork(boost::asio::io_context::fork_prepare);
                 if (fork() != 0) {
@@ -167,17 +170,17 @@ void server::do_wait()
     });
 }
 
-void server::do_accept()
+void server::do_accept(boost::asio::io_context& io_context)
 {
     acceptor_.async_accept(
-        [this](boost::system::error_code ec, boost::asio::ip::tcp::socket socket)
+        [this, &io_context](boost::system::error_code ec, boost::asio::ip::tcp::socket socket)
         {
             if (!ec)
             {
                 cn_.start(make_shared<single_conn>(
-                move(socket), cn_, io_context_));
+                    move(socket), cn_, io_context));
             }
-            do_accept();
+            do_accept(io_context);
     });
 }
 
