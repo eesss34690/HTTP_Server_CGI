@@ -12,6 +12,7 @@ cgi_parser::cgi_parser(const char* query){
     string ans(query);
     env = ans;
     num = 5;
+    parser();
 }
 
 void cgi_parser::parser()
