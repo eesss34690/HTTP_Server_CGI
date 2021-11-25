@@ -9,9 +9,7 @@
 using namespace std;
 
 cgi_parser::cgi_parser(const char* query){
-    cout << "?";
     string ans(query);
-    cout << ans << endl;
     env = ans;
     num = 5;
 }
@@ -28,25 +26,17 @@ void cgi_parser::parser()
             num = query_big.size() / 3;
             break;
         }
-        query_big.push_back(make_pair(env.substr(start, mid - start), \
-            env.substr(mid + 1, end - mid - 1)));
-        cout << env.substr(start, mid - start) << " " << env.substr(mid + 1, end - mid - 1) << endl;
+        query_big[env.substr(start, mid - start)] = env.substr(mid + 1, end - mid - 1);
         start = end + 1;
         end = env.find('&', start);
     }
     mid = env.find('=', start);
     if (end - mid == 1)
-        query_big.push_back(make_pair(env.substr(start, mid - start), \
-            env.substr(mid + 1, end - mid - 1)));
-    for (auto &i: query_big)
-    {
-        cout << "first: " << i.first <<" second: " <<i.second <<endl;
-    }
+        query_big[env.substr(start, mid - start)] = env.substr(mid + 1, end - mid - 1);
 }
 
 int main ()
 {
-    cout << getenv("QUERY_STRING");
     cgi_parser query_parse(getenv("QUERY_STRING"));
     cout << "<!DOCTYPE html>\r\n\r\n";
     cout << "<html lang=\"en\">\r\n";
@@ -88,14 +78,26 @@ int main ()
     cout << "<table class=\"table table-dark table-bordered\">\r\n";
     cout << "  <thead>\r\n";
     cout << "    <tr>\r\n";
-    cout << "      <th scope=\"col\">nplinux1.cs.nctu.edu.tw:1234</th>\r\n";
-    cout << "      <th scope=\"col\">nplinux2.cs.nctu.edu.tw:5678</th>\r\n";
+    for (int i = 0; i< query_parse.get_num(); i++)
+    {
+        cout << "      <th scope=\"col\">";
+        string temp = "h" + to_string(i);
+        cout << query_parse.get_attri(temp) << ":";
+        temp[0] = 'p';
+        cout << query_parse.get_attri(temp) << "</th>\r\n";
+    }
+    //cout << "      <th scope=\"col\">nplinux1.cs.nctu.edu.tw:1234</th>\r\n";
     cout << "    </tr>\r\n";
     cout << "  </thead>\r\n";
     cout << "  <tbody>\r\n";
     cout << "    <tr>\r\n";
-    cout << "      <td><pre id=\"s0\" class=\"mb-0\"></pre></td>\r\n";
-    cout << "      <td><pre id=\"s1\" class=\"mb-0\"></pre></td>\r\n";
+    for (int i = 0; i< query_parse.get_num(); i++)
+    {
+        cout << "      <td><pre id=\"";
+        string temp = "s" + to_string(i);
+        cout << temp << "\" class=\"mb-0\"></pre></td>\r\n";
+    }
+    //cout << "      <td><pre id=\"s0\" class=\"mb-0\"></pre></td>\r\n";
     cout << "    </tr>\r\n";
     cout << "  </tbody>\r\n";
     cout << "</table>\r\n";
