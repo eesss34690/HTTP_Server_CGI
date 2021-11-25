@@ -12,7 +12,7 @@ using namespace std;
 void output_shell(string session, string content){
     cout << "<script>document.getElementById(\"";
     cout << session << "\").innerHTML += '";
-    cout << content << "';</script>\r\n";
+    cout << content << "</br>';</script>\r\n";
 }
 
 void output_command(string session, string content){
@@ -116,5 +116,6 @@ int main ()
     cout << "</body>\r\n";
     cout << "</html>\r\n";
 
-    
+    output_shell("s0", "test");    
+    output_shell("s0", "testtest");   
 }
