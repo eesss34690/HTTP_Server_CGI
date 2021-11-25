@@ -9,9 +9,9 @@ private:
     string env;
     int num;
     map<string, string> query_big;
+    void parser();
 public:
     cgi_parser(const char* query);
-    void parser();
     int get_num(){return num;}
     string get_attri(string key){return query_big.find(key)->second;}
 };

@@ -5,8 +5,19 @@
 #include <stdio.h>  
 #include <stdlib.h>
 #include "cgi_parser.hpp"
+#include "output_dyn.hpp"
 
 using namespace std;
+
+void output_shell(string session, string content){
+    cout << "<script>document.getElementById(\"";
+    cout << session << "\").innerHTML += '";
+    cout << content << "';</script>\r\n";
+}
+
+void output_command(string session, string content){
+
+}
 
 cgi_parser::cgi_parser(const char* query){
     string ans(query);
@@ -104,4 +115,6 @@ int main ()
     cout << "</table>\r\n";
     cout << "</body>\r\n";
     cout << "</html>\r\n";
+
+    
 }
