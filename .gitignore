@@ -7,3 +7,4 @@ cmds/
 *.o
 __MACOSX
 .vscode
+sample_console.cgi

@@ -1,13 +1,53 @@
 #include <iostream>
 #include <vector>  
 #include <string>  
+#include <utility>
 #include <stdio.h>  
 #include <stdlib.h>
+#include "cgi_parser.hpp"
 
 using namespace std;
 
+cgi_parser::cgi_parser(const char* query){
+    cout << "?";
+    string ans(query);
+    cout << ans << endl;
+    env = ans;
+    num = 5;
+}
+
+void cgi_parser::parser()
+{
+    int start = 0;
+    int end = env.find('&');
+    int mid;
+    while (end != -1) {
+        mid = env.find('=', start);
+        if (end - mid == 1)
+        {
+            num = query_big.size() / 3;
+            break;
+        }
+        query_big.push_back(make_pair(env.substr(start, mid - start), \
+            env.substr(mid + 1, end - mid - 1)));
+        cout << env.substr(start, mid - start) << " " << env.substr(mid + 1, end - mid - 1) << endl;
+        start = end + 1;
+        end = env.find('&', start);
+    }
+    mid = env.find('=', start);
+    if (end - mid == 1)
+        query_big.push_back(make_pair(env.substr(start, mid - start), \
+            env.substr(mid + 1, end - mid - 1)));
+    for (auto &i: query_big)
+    {
+        cout << "first: " << i.first <<" second: " <<i.second <<endl;
+    }
+}
+
 int main ()
 {
+    cout << getenv("QUERY_STRING");
+    cgi_parser query_parse(getenv("QUERY_STRING"));
     cout << "<!DOCTYPE html>\r\n\r\n";
     cout << "<html lang=\"en\">\r\n";
     cout << "<head>\r\n";
