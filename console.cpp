@@ -4,19 +4,71 @@
 #include <utility>
 #include <stdio.h>  
 #include <stdlib.h>
+#include <set>
+#include <boost/asio.hpp>
+#define BOOST_NO_CXX11_SCOPED_ENUMS
+#include <boost/filesystem.hpp>
+#undef BOOST_NO_CXX11_SCOPED_ENUMS
 #include "cgi_parser.hpp"
-#include "output_dyn.hpp"
+#include "client.hpp"
+#include "output_func.hpp"
 
 using namespace std;
 
-void output_shell(string session, string content){
-    cout << "<script>document.getElementById(\"";
-    cout << session << "\").innerHTML += '";
-    cout << content << "</br>';</script>\r\n";
+void client::start()
+{
+    auto path = boost::filesystem::path("test_case") / file_;
+    if (boost::filesystem::is_regular_file(path))
+    {
+        boost::filesystem::ifstream f(path);
+        string line;
+        while (getline(f, line))
+            cmd_list.push_back(line);
+        f.close();
+        boost::asio::ip::tcp::resolver::query query(host_, port_);
+        
+        resolver.async_resolve(query, [this](const boost::system::error_code& ec,
+            boost::asio::ip::tcp::resolver::iterator it) {
+                socket.async_connect(it->endpoint(), [this](const boost::system::error_code& ec) {
+                    do_read();
+                });
+        });
+    }
 }
 
-void output_command(string session, string content){
+void client::do_read()
+{
+    socket.async_read_some(
+        boost::asio::buffer(data_, max_length),
+        [this](const boost::system::error_code& ec, size_t length) {
+            if (!ec) {
+                if (data_[0] == '%' && data_[1] == ' ') {
+                    do_write();
+                } else {
+                    output_command(session, data_);
+                    do_read();
+                }
+            }
+    });
+}
 
+void client::do_write()
+{
+    string cmd = cmd_list[idx];
+    if (cmd.empty()) {
+        output_shell(session, "");
+    } else {
+        cmd += "\n";
+        socket.async_send(
+            boost::asio::buffer(cmd.c_str(), strlen(cmd.c_str())),
+            [this](boost::system::error_code ec, size_t _) {
+                if (!ec) {
+                    output_shell(session, "");
+                    do_read();
+                }
+        });
+    }
+    idx++;
 }
 
 cgi_parser::cgi_parser(const char* query){
@@ -116,6 +168,17 @@ int main ()
     cout << "</body>\r\n";
     cout << "</html>\r\n";
 
-    output_shell("s0", "test");    
-    output_shell("s0", "testtest");   
+    //output_shell("s0", "test");    
+    //output_shell("s0", "testtest"); 
+
+    boost::asio::io_context io_context_;
+    set<shared_ptr<client> > clients;
+    for (int i = 0; i < query_parse.get_num(); i++) {
+        auto ptr = make_shared<client>(io_context_, i, "h" + to_string(i), "p" + to_string(i), "f" + to_string(i));
+        clients.insert(ptr);
+        ptr->start();
+    }
+    io_context_.run();
+
+
 }

@@ -72,7 +72,7 @@ void single_conn::do_read()
 		else
 			header["QUERY_STRING"] = "";
 		cout << "QUERY: "<< header["QUERY_STRING"] << endl;
-                while (getline(input, line, '\n')) {
+        while (getline(input, line, '\n')) {
 		    if (line.empty() || line == "\r") {
                         break; // end of headers reached
                     }
