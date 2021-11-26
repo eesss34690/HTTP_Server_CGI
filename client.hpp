@@ -7,7 +7,8 @@
 using namespace std;
 using namespace boost::asio;
 
-class client : enable_shared_from_this<client> {
+class client
+ : public enable_shared_from_this<client> {
 private:
     string host_;
     string port_;
