@@ -24,7 +24,15 @@ void client::start()
         boost::filesystem::ifstream f(path);
         string line;
         while (getline(f, line))
+	{
+	    if (line.empty() || line == "\r") {
+                break; // end of headers reached
+            }
+            if (line.back() == '\r') {
+                line.resize(line.size()-1);
+            }
             cmd_list.push_back(line);
+	}
         f.close();
         boost::asio::ip::tcp::resolver::query query(host_, port_);
         resolver.async_resolve(query, [this](const boost::system::error_code& ec,
@@ -71,27 +79,29 @@ void client::do_read()
 	        {
 		        output_shell(session, ec.message().c_str());
 	        }
+		memset(data_, 0, max_length);
     });
 }
 
 void client::do_write()
 {
     auto self(shared_from_this());
-    string cmd = cmd_list[idx];
+    string cmd = cmd_list[idx++];
+    output_command(session, cmd.c_str());
     if (cmd.empty()) {
-        output_shell(session, "");
+        //output_shell(session, "");
+        output_command(session, "</br>");    
+	do_write();
     } else {
-        cmd += "\n";
         socket.async_send(
-            boost::asio::buffer(cmd.c_str(), strlen(cmd.c_str())),
-            [this, self](boost::system::error_code ec, size_t _) {
+            boost::asio::buffer((cmd + "\n").c_str(), 1 + strlen(cmd.c_str())),
+            [this, self, &cmd](boost::system::error_code ec, size_t _) {
                 if (!ec) {
-                    output_shell(session, "");
+                    output_command(session, "</br>");
                     do_read();
                 }
         });
     }
-    idx++;
 }
 
 cgi_parser::cgi_parser(const char* query){

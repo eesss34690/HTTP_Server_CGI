@@ -11,5 +11,5 @@ void output_shell(string session, const char* content){
 void output_command(string session, const char* content){
     cout << "<script>document.getElementById(\"";
     cout << session << "\").innerHTML += '<b>";
-    cout << content << "</br></b>';</script>\r\n";
+    cout << content << "</b>';</script>\r\n";
 }
