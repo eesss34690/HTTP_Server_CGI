@@ -155,6 +155,7 @@ void single_conn::HandleRequest_(bool is_good_request){
                     io_context_.notify_fork(boost::asio::io_context::fork_parent);
                 } else {
                     io_context_.notify_fork(boost::asio::io_context::fork_child);
+                    cout << "good fork\n";
                     int sockfd = socket_.native_handle();
                     dup2(sockfd, 0);
                     dup2(sockfd, 1);

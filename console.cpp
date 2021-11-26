@@ -17,6 +17,7 @@ using namespace std;
 
 void client::start()
 {
+    output_shell(session, "test");
     auto path = boost::filesystem::path("test_case") / file_;
     if (boost::filesystem::is_regular_file(path))
     {
@@ -174,7 +175,8 @@ int main ()
     boost::asio::io_context io_context_;
     set<shared_ptr<client> > clients;
     for (int i = 0; i < query_parse.get_num(); i++) {
-        auto ptr = make_shared<client>(io_context_, i, "h" + to_string(i), "p" + to_string(i), "f" + to_string(i));
+        auto ptr = make_shared<client>(io_context_, "s" + to_string(i), "h" + to_string(i), "p" + to_string(i), "f" + to_string(i));
+        output_shell("s0", to_string(i));
         clients.insert(ptr);
         ptr->start();
     }

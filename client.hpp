@@ -25,8 +25,8 @@ private:
     void do_read();
     void do_write();
 public:
-    client(boost::asio::io_context& io_context, int id, string h, string p, string f)
-        : host_(h), port_(p), file_(f), idx(0), session("s" + h[1]), socket(io_context), resolver(io_context){};
+    client(boost::asio::io_context& io_context, string s, string h, string p, string f)
+        : host_(h), port_(p), file_(f), session(s), idx(0), socket(io_context), resolver(io_context){};
     void start();
 
 };
