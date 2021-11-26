@@ -17,7 +17,6 @@ using namespace std;
 
 void client::start()
 {
-    output_shell(session, "test");
     auto path = boost::filesystem::path("test_case") / file_;
     if (boost::filesystem::is_regular_file(path))
     {
@@ -27,7 +26,6 @@ void client::start()
             cmd_list.push_back(line);
         f.close();
         boost::asio::ip::tcp::resolver::query query(host_, port_);
-        
         resolver.async_resolve(query, [this](const boost::system::error_code& ec,
             boost::asio::ip::tcp::resolver::iterator it) {
                 socket.async_connect(it->endpoint(), [this](const boost::system::error_code& ec) {
@@ -39,11 +37,16 @@ void client::start()
 
 void client::do_read()
 {
+    output_shell(session, "before");
+    auto self(shared_from_this());
+    output_shell(session, "why");
     socket.async_read_some(
         boost::asio::buffer(data_, max_length),
-        [this](const boost::system::error_code& ec, size_t length) {
-            if (!ec) {
+        [this, self](const boost::system::error_code& ec, size_t length) {
+            output_shell(session, "test");
+	    if (!ec) {
                 if (data_[0] == '%' && data_[1] == ' ') {
+		    output_shell(session, "test");
                     do_write();
                 } else {
                     output_command(session, data_);
@@ -55,6 +58,7 @@ void client::do_read()
 
 void client::do_write()
 {
+    auto self(shared_from_this());
     string cmd = cmd_list[idx];
     if (cmd.empty()) {
         output_shell(session, "");
@@ -62,7 +66,7 @@ void client::do_write()
         cmd += "\n";
         socket.async_send(
             boost::asio::buffer(cmd.c_str(), strlen(cmd.c_str())),
-            [this](boost::system::error_code ec, size_t _) {
+            [this, self](boost::system::error_code ec, size_t _) {
                 if (!ec) {
                     output_shell(session, "");
                     do_read();
@@ -175,8 +179,8 @@ int main ()
     boost::asio::io_context io_context_;
     set<shared_ptr<client> > clients;
     for (int i = 0; i < query_parse.get_num(); i++) {
-        auto ptr = make_shared<client>(io_context_, "s" + to_string(i), "h" + to_string(i), "p" + to_string(i), "f" + to_string(i));
-        output_shell("s0", to_string(i));
+        auto ptr = make_shared<client>(io_context_, "s" + to_string(i), query_parse.get_attri("h" + to_string(i)),\
+		 query_parse.get_attri("p" + to_string(i)), query_parse.get_attri("f" + to_string(i)));
         clients.insert(ptr);
         ptr->start();
     }
