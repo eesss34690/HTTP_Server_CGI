@@ -25,34 +25,44 @@ void client::start()
         while (getline(f, line))
             cmd_list.push_back(line);
         f.close();
+	output_shell(session, host_.c_str());
+	output_shell(session, port_.c_str());
         boost::asio::ip::tcp::resolver::query query(host_, port_);
         resolver.async_resolve(query, [this](const boost::system::error_code& ec,
             boost::asio::ip::tcp::resolver::iterator it) {
+		if (!ec)
                 socket.async_connect(it->endpoint(), [this](const boost::system::error_code& ec) {
+		if (!ec)
                     do_read();
+		else
+		    output_shell(session, ec.message().c_str());
                 });
+		else
+			output_shell(session, ec.message().c_str());
         });
     }
 }
 
 void client::do_read()
 {
-    output_shell(session, "before");
     auto self(shared_from_this());
-    output_shell(session, "why");
     socket.async_read_some(
         boost::asio::buffer(data_, max_length),
         [this, self](const boost::system::error_code& ec, size_t length) {
-            output_shell(session, "test");
 	    if (!ec) {
                 if (data_[0] == '%' && data_[1] == ' ') {
 		    output_shell(session, "test");
                     do_write();
                 } else {
-                    output_command(session, data_);
+            	    output_shell(session, "else");
+	            output_command(session, data_);
                     do_read();
                 }
             }
+	    else
+	    {
+		output_shell(session, ec.message().c_str());
+	    }
     });
 }
 

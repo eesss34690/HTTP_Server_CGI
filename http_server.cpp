@@ -23,6 +23,7 @@ using namespace std;
 void connection::start(std::shared_ptr<single_conn> c)
 {
     connections_.insert(c);
+    cout << "manager start\n";
     c->start();
 }
 void connection::stop(std::shared_ptr<single_conn> c)
@@ -44,6 +45,7 @@ void single_conn::do_read()
     boost::asio::buffer(data_, max_length),
         [this, self](boost::system::error_code ec, size_t length) {
             if (!ec) {
+		cout << "okay\n"; 
                 std::size_t pos;
                 string line;
                 boost::interprocess::bufferstream input(data_, strlen(data_));
@@ -91,6 +93,8 @@ void single_conn::do_read()
             } else if (ec != boost::asio::error::operation_aborted) {
                 cn_.stop(shared_from_this());
             }
+	    else
+		cout << ec.message();
         });
 }
 
@@ -193,6 +197,7 @@ void server::do_wait()
 
 void server::do_accept(boost::asio::io_context& io_context)
 {
+    cout << "accepting\n";
     acceptor_.async_accept(
         [this, &io_context](boost::system::error_code ec, boost::asio::ip::tcp::socket socket)
         {
