@@ -9,6 +9,7 @@
 #define BOOST_NO_CXX11_SCOPED_ENUMS
 #include <boost/filesystem.hpp>
 #undef BOOST_NO_CXX11_SCOPED_ENUMS
+#include <boost/interprocess/streams/bufferstream.hpp>
 #include "cgi_parser.hpp"
 #include "client.hpp"
 #include "output_func.hpp"
@@ -25,20 +26,18 @@ void client::start()
         while (getline(f, line))
             cmd_list.push_back(line);
         f.close();
-	output_shell(session, host_.c_str());
-	output_shell(session, port_.c_str());
         boost::asio::ip::tcp::resolver::query query(host_, port_);
         resolver.async_resolve(query, [this](const boost::system::error_code& ec,
             boost::asio::ip::tcp::resolver::iterator it) {
-		if (!ec)
+            if (!ec)
                 socket.async_connect(it->endpoint(), [this](const boost::system::error_code& ec) {
-		if (!ec)
-                    do_read();
-		else
-		    output_shell(session, ec.message().c_str());
+                    if (!ec)
+                                do_read();
+                    else
+                        output_shell(session, ec.message().c_str());
                 });
-		else
-			output_shell(session, ec.message().c_str());
+            else
+                output_shell(session, ec.message().c_str());
         });
     }
 }
@@ -49,20 +48,29 @@ void client::do_read()
     socket.async_read_some(
         boost::asio::buffer(data_, max_length),
         [this, self](const boost::system::error_code& ec, size_t length) {
-	    if (!ec) {
-                if (data_[0] == '%' && data_[1] == ' ') {
-		    output_shell(session, "test");
-                    do_write();
-                } else {
-            	    output_shell(session, "else");
-	            output_command(session, data_);
-                    do_read();
+	        if (!ec) {
+                string line;
+                boost::interprocess::bufferstream input(data_, strlen(data_));
+                while (getline(input, line, '\n')) {
+                    if (line.empty() || line == "\r") {
+                        break; // end of headers reached
+                    }
+                    if (line.back() == '\r') {
+                        line.resize(line.size()-1);
+                    }
+                    if (line[0] == '%' && line[1] == ' ') {
+                        output_command(session, line.c_str());
+                        do_write();
+                    } else {
+                        output_shell(session, line.c_str());
+                        do_read();
+                    }
                 }
             }
-	    else
-	    {
-		output_shell(session, ec.message().c_str());
-	    }
+	        else
+	        {
+		        output_shell(session, ec.message().c_str());
+	        }
     });
 }
 

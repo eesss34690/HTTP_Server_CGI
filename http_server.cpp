@@ -23,7 +23,6 @@ using namespace std;
 void connection::start(std::shared_ptr<single_conn> c)
 {
     connections_.insert(c);
-    cout << "manager start\n";
     c->start();
 }
 void connection::stop(std::shared_ptr<single_conn> c)
@@ -45,7 +44,7 @@ void single_conn::do_read()
     boost::asio::buffer(data_, max_length),
         [this, self](boost::system::error_code ec, size_t length) {
             if (!ec) {
-		cout << "okay\n"; 
+		        cout << "okay\n"; 
                 std::size_t pos;
                 string line;
                 boost::interprocess::bufferstream input(data_, strlen(data_));
@@ -54,28 +53,28 @@ void single_conn::do_read()
                     line.resize(line.size()-1);
                 }
                 header["REQUEST_METHOD"] = line.substr(0, line.find(" "));
-		line = line.substr(line.find("/"));
-		if ((pos = line.find(" ")) != string::npos)
-		{
-			header["REQUEST_URI"] = line.substr(line.find("/"), pos);
-			if ((pos = line.find("?")) != string::npos)
-				header["URI"] = line.substr(line.find("/"), pos);
-			else
-				header["URI"] = header["REQUEST_URI"];
-			header["SERVER_PROTOCOL"] = line.substr(line.find("H"));
-		}
-		else
-			header["REQUEST_URI"] = line.substr(line.find("/"));
-                if ((pos = header["REQUEST_URI"].find("?")) != string::npos)
-		{
-			auto pos2 = header["REQUEST_URI"].find(" ");
-			header["QUERY_STRING"] = header["REQUEST_URI"].substr(pos + 1, pos2);
-		}
-		else
-			header["QUERY_STRING"] = "";
-		cout << "QUERY: "<< header["QUERY_STRING"] << endl;
-        while (getline(input, line, '\n')) {
-		    if (line.empty() || line == "\r") {
+                line = line.substr(line.find("/"));
+                if ((pos = line.find(" ")) != string::npos)
+                {
+                    header["REQUEST_URI"] = line.substr(line.find("/"), pos);
+                    if ((pos = line.find("?")) != string::npos)
+                        header["URI"] = line.substr(line.find("/"), pos);
+                    else
+                        header["URI"] = header["REQUEST_URI"];
+                    header["SERVER_PROTOCOL"] = line.substr(line.find("H"));
+                }
+                else
+                    header["REQUEST_URI"] = line.substr(line.find("/"));
+                        if ((pos = header["REQUEST_URI"].find("?")) != string::npos)
+                {
+                    auto pos2 = header["REQUEST_URI"].find(" ");
+                    header["QUERY_STRING"] = header["REQUEST_URI"].substr(pos + 1, pos2);
+                }
+                else
+                    header["QUERY_STRING"] = "";
+                cout << "QUERY: "<< header["QUERY_STRING"] << endl;
+                while (getline(input, line, '\n')) {
+                    if (line.empty() || line == "\r") {
                         break; // end of headers reached
                     }
                     if (line.back() == '\r') {
@@ -94,7 +93,7 @@ void single_conn::do_read()
                 cn_.stop(shared_from_this());
             }
 	    else
-		cout << ec.message();
+		    cout << ec.message();
         });
 }
 
