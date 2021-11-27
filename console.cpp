@@ -81,7 +81,7 @@ void client::do_read()
                     }
                 }
             }
-	        else
+	        else if (ec != boost::asio::error::eof)
 	        {
 		        output_shell(session, ec.message().c_str());
 	        }
