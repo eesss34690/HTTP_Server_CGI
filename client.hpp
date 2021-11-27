@@ -1,5 +1,6 @@
 #include <boost/asio.hpp>
 #include <boost/array.hpp>
+#include <boost/thread/mutex.hpp>
 #include <memory>
 #include <string>
 #include <vector>
@@ -23,11 +24,13 @@ private:
 
     boost::asio::ip::tcp::socket socket;
     boost::asio::ip::tcp::resolver resolver;
+
+    boost::mutex mtx_r;
+    boost::mutex mtx_w;
     void do_read();
     void do_write();
 public:
-    client(boost::asio::io_context& io_context, string s, string h, string p, string f)
-        : host_(h), port_(p), file_(f), session(s), idx(0), socket(io_context), resolver(io_context){};
+    client(boost::asio::io_context& io_context, string s, string h, string p, string f);
     void start();
 
 };

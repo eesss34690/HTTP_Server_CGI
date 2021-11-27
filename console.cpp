@@ -10,11 +10,15 @@
 #include <boost/filesystem.hpp>
 #undef BOOST_NO_CXX11_SCOPED_ENUMS
 #include <boost/interprocess/streams/bufferstream.hpp>
+#include <boost/thread/mutex.hpp>
 #include "cgi_parser.hpp"
 #include "client.hpp"
 #include "output_func.hpp"
 
 using namespace std;
+
+client::client(boost::asio::io_context& io_context, string s, string h, string p, string f)
+    : host_(h), port_(p), file_(f), session(s), idx(0), socket(io_context), resolver(io_context){}
 
 void client::start()
 {
@@ -67,10 +71,14 @@ void client::do_read()
                         line.resize(line.size()-1);
                     }
                     if (line[0] == '%' && line[1] == ' ') {
-                        output_command(session, line.c_str());
+                        mtx_r.lock();
+                        output_shell(session, line.c_str());
+                        mtx_w.unlock();
                         do_write();
                     } else {
+                        mtx_r.lock();
                         output_shell(session, line.c_str());
+                        mtx_r.unlock();
                         do_read();
                     }
                 }
@@ -87,17 +95,20 @@ void client::do_write()
 {
     auto self(shared_from_this());
     string cmd = cmd_list[idx++];
-    output_command(session, cmd.c_str());
+    
     if (cmd.empty()) {
-        //output_shell(session, "");
+        mtx_w.lock();
         output_command(session, "</br>");    
-	do_write();
+        mtx_w.unlock();
+	    do_write();
     } else {
         socket.async_send(
             boost::asio::buffer((cmd + "\n").c_str(), 1 + strlen(cmd.c_str())),
             [this, self, &cmd](boost::system::error_code ec, size_t _) {
                 if (!ec) {
+                    output_command(session, cmd.c_str());
                     output_command(session, "</br>");
+                    mtx_r.unlock();
                     do_read();
                 }
         });
