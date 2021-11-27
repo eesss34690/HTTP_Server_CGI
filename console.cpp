@@ -87,7 +87,8 @@ void client::do_read()
 	        {
 		        output_shell(session, ec.message().c_str());
 	        }
-		memset(data_, 0, max_length);
+		output_shell(session, "clean");
+        	memset(data_, 0, max_length);
     });
 }
 
@@ -102,11 +103,12 @@ void client::do_write()
         mtx_w.unlock();
 	    do_write();
     } else {
+        mtx_w.lock();
+        output_command(session, cmd.c_str());
         socket.async_send(
             boost::asio::buffer((cmd + "\n").c_str(), 1 + strlen(cmd.c_str())),
             [this, self, &cmd](boost::system::error_code ec, size_t _) {
                 if (!ec) {
-                    output_command(session, cmd.c_str());
                     output_command(session, "</br>");
                     mtx_r.unlock();
                     do_read();
