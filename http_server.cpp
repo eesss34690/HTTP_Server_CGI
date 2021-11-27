@@ -44,7 +44,6 @@ void single_conn::do_read()
     boost::asio::buffer(data_, max_length),
         [this, self](boost::system::error_code ec, size_t length) {
             if (!ec) {
-		        cout << "okay\n"; 
                 std::size_t pos;
                 string line;
                 boost::interprocess::bufferstream input(data_, strlen(data_));
@@ -158,7 +157,6 @@ void single_conn::HandleRequest_(bool is_good_request){
                     io_context_.notify_fork(boost::asio::io_context::fork_parent);
                 } else {
                     io_context_.notify_fork(boost::asio::io_context::fork_child);
-                    cout << "good fork\n";
                     int sockfd = socket_.native_handle();
                     dup2(sockfd, 0);
                     dup2(sockfd, 1);
@@ -196,7 +194,6 @@ void server::do_wait()
 
 void server::do_accept(boost::asio::io_context& io_context)
 {
-    cout << "accepting\n";
     acceptor_.async_accept(
         [this, &io_context](boost::system::error_code ec, boost::asio::ip::tcp::socket socket)
         {

@@ -13,13 +13,29 @@
 #include <boost/thread/mutex.hpp>
 #include "cgi_parser.hpp"
 #include "client.hpp"
+#include "client_set.hpp"
 #include "output_func.hpp"
 
 using namespace std;
-
-client::client(boost::asio::io_context& io_context, string s, string h, string p, string f)
-    : host_(h), port_(p), file_(f), session(s), idx(0), socket(io_context)\
-    , io_context_(io_context), resolver(io_context){}
+void client_set::start(std::shared_ptr<client> c)
+{
+    connections_.insert(c);
+    c->start();
+}
+void client_set::stop(std::shared_ptr<client> c)
+{
+    connections_.erase(c);
+    c->stop();
+}
+void client_set::stop_all(){
+    for (auto &i : connections_) {
+        i->stop();
+    }
+    connections_.clear();
+}
+client::client(boost::asio::io_context& io_context, client_set& cs, string s, string h, string p, string f)
+    : host_(h), port_(p), file_(f), session(s), idx(0), cs_(cs), socket(io_context)\
+    , resolver(io_context), io_context_(io_context){}
 
 void client::start()
 {
@@ -87,14 +103,14 @@ void client::do_read()
 		        //output_shell(session, ec.message().c_str());
 	        	mtx_w.unlock();
                 boost::asio::post(io_context_, [this]() { socket.close(); });
-		
+                cs_.stop(self);
                 return;
-	    }
+	        }
             else
-	    {
+	        {
                 output_shell(session, ec.message().c_str());
-		socket.close();
-	    }
+		        socket.close();
+	        }
         memset(data_, 0, max_length);
     });
 }
@@ -227,12 +243,14 @@ int main ()
     //output_shell("s0", "testtest"); 
 
     boost::asio::io_context io_context_;
-    set<shared_ptr<client> > clients;
+    client_set cs;
+    //set<shared_ptr<client> > clients;
     for (int i = 0; i < query_parse.get_num(); i++) {
         auto ptr = make_shared<client>(io_context_, "s" + to_string(i), query_parse.get_attri("h" + to_string(i)),\
 		 query_parse.get_attri("p" + to_string(i)), query_parse.get_attri("f" + to_string(i)));
-        clients.insert(ptr);
-        ptr->start();
+        cs.start(ptr);
+        //clients.insert(ptr);
+        //ptr->start();
     }
     io_context_.run();
 

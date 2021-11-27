@@ -4,10 +4,12 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include "client_set.hpp"
 
 using namespace std;
 using namespace boost::asio;
 
+class client_set;
 class client
  : public enable_shared_from_this<client> {
 private:
@@ -15,6 +17,7 @@ private:
     string port_;
     string file_;
     string session;
+    client_set& cs_;
 
     vector<string> cmd_list;
     int idx;
@@ -31,7 +34,7 @@ private:
     void do_read();
     void do_write();
 public:
-    client(boost::asio::io_context& io_context, string s, string h, string p, string f);
+    client(boost::asio::io_context& io_context, client_set& cs, string s, string h, string p, string f);
     void start();
 
 };
