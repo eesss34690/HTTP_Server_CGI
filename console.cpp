@@ -18,7 +18,8 @@
 using namespace std;
 
 client::client(boost::asio::io_context& io_context, string s, string h, string p, string f)
-    : host_(h), port_(p), file_(f), session(s), idx(0), socket(io_context), resolver(io_context){}
+    : host_(h), port_(p), file_(f), session(s), idx(0), socket(io_context)\
+    , io_context_(io_context), resolver(io_context){}
 
 void client::start()
 {
@@ -85,10 +86,11 @@ void client::do_read()
 	        {
 		        //output_shell(session, ec.message().c_str());
 	        	mtx_w.unlock();
-		}
-		else
-			output_shell(session, ec.message().c_str());
-        	memset(data_, 0, max_length);
+                boost::asio::post(io_context_, [this]() { socket_.close(); });
+            }
+            else
+                output_shell(session, ec.message().c_str());
+        memset(data_, 0, max_length);
     });
 }
 
