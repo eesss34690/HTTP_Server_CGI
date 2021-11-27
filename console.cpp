@@ -81,10 +81,13 @@ void client::do_read()
                     }
                 }
             }
-	        else if (ec != boost::asio::error::eof)
+	        else if (ec == boost::asio::error::eof)
 	        {
-		        output_shell(session, ec.message().c_str());
-	        }
+		        //output_shell(session, ec.message().c_str());
+	        	mtx_w.unlock();
+		}
+		else
+			output_shell(session, ec.message().c_str());
         	memset(data_, 0, max_length);
     });
 }
