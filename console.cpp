@@ -64,15 +64,13 @@ void client::do_read()
                 string line;
                 boost::interprocess::bufferstream input(data_, strlen(data_));
                 while (getline(input, line, '\n')) {
-                    if (line.empty() || line == "\r") {
-                        break; // end of headers reached
+                    while (line.back() == '\r' || line.back() == '\n') {
+                        line.pop_back();
                     }
-                    if (line.back() == '\r') {
-                        line.resize(line.size()-1);
-                    }
+                    if (line.empty()) break;
                     if (line[0] == '%' && line[1] == ' ') {
                         mtx_r.lock();
-                        output_shell(session, line.c_str());
+                        output_command(session, line.c_str());
                         mtx_w.unlock();
                         do_write();
                     } else {
@@ -87,7 +85,6 @@ void client::do_read()
 	        {
 		        output_shell(session, ec.message().c_str());
 	        }
-		output_shell(session, "clean");
         	memset(data_, 0, max_length);
     });
 }
@@ -203,9 +200,9 @@ int main ()
     cout << "    <tr>\r\n";
     for (int i = 0; i< query_parse.get_num(); i++)
     {
-        cout << "      <td><pre id=\"";
+        cout << "      <td><div class=\"scrollable\"><pre class=\"pre-scrollable\" id=\"";
         string temp = "s" + to_string(i);
-        cout << temp << "\" class=\"mb-0\"></pre></td>\r\n";
+        cout << temp << "\" class=\"mb-0\"></pre></div></td>\r\n";
     }
     //cout << "      <td><pre id=\"s0\" class=\"mb-0\"></pre></td>\r\n";
     cout << "    </tr>\r\n";
