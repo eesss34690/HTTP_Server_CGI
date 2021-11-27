@@ -23,9 +23,10 @@ http_server: http_server.cpp
 console.cgi: console.cpp
 	$(CXX) -o $@ $^ $(CXX_INCLUDE_PARAMS) $(CXX_LIB_PARAMS) $(CXXFLAGS)
 
-precompile: ./cmds/noop.cpp ./cmds/number.cpp ./cmds/removetag.cpp ./cmds/removetag0.cpp
+precompile: ./cmds/noop.cpp ./cmds/number.cpp ./cmds/removetag.cpp ./cmds/removetag0.cpp ./cmds/delayedremovetag.cpp
 	cp ${SRC}/ls ./bin
 	cp ${SRC}/cat ./bin
+	$(CXX) ./cmds/delayedremovetag.cpp -o ./bin/delayedremovetag
 	$(CXX) ./cmds/noop.cpp -o ./bin/noop
 	$(CXX) ./cmds/number.cpp -o ./bin/number
 	$(CXX) ./cmds/removetag.cpp -o ./bin/removetag

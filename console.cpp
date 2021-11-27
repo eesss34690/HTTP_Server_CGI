@@ -86,10 +86,15 @@ void client::do_read()
 	        {
 		        //output_shell(session, ec.message().c_str());
 	        	mtx_w.unlock();
-                boost::asio::post(io_context_, [this]() { socket_.close(); });
-            }
+                boost::asio::post(io_context_, [this]() { socket.close(); });
+		
+                return;
+	    }
             else
+	    {
                 output_shell(session, ec.message().c_str());
+		socket.close();
+	    }
         memset(data_, 0, max_length);
     });
 }
@@ -115,6 +120,8 @@ void client::do_write()
                     mtx_r.unlock();
                     do_read();
                 }
+		else
+			output_command(session, ec.message().c_str());
         });
     }
 }
