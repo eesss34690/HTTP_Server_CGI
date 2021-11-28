@@ -31,8 +31,7 @@ private:
     boost::asio::ip::tcp::resolver resolver;
     boost::asio::io_context& io_context_;
 
-    boost::mutex mtx_r;
-    boost::mutex mtx_w;
+    boost::mutex mtx;
     void do_read();
     void do_write();
 public:
