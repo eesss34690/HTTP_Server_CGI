@@ -1,5 +1,5 @@
-#ifndef _CONNECTION_HPP_
-#define _CONNECTION_HPP_
+#ifndef _CLIENT_SET_HPP_
+#define _CLIENT_SET_HPP_
 
 #include <memory>
 #include <utility>

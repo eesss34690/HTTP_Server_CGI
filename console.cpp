@@ -80,28 +80,45 @@ void client::do_read()
 	        if (!ec) {
                 string line;
                 boost::interprocess::bufferstream input(data_, strlen(data_));
+		getline(input, line, '\n');
+		if (line[0] == '%' && line[1] == ' ')
+		{
+		        //mtx_r.lock();
+                        output_command(session, line.c_str());
+                        memset(data_, 0, max_length);
+			//mtx_w.unlock();
+                        do_write();
+			return;
+		}
+		else
+		{
+			//mtx_r.lock();
+			output_shell(session, line.c_str());
+		}
                 while (getline(input, line, '\n')) {
                     while (line.back() == '\r' || line.back() == '\n') {
                         line.pop_back();
                     }
                     if (line.empty()) break;
-                    if (line[0] == '%' && line[1] == ' ') {
-                        mtx_r.lock();
+		    if (line[0] == '%' && line[1] == ' ')
+	         	{
                         output_command(session, line.c_str());
-                        mtx_w.unlock();
+			memset(data_, 0, max_length);
+
+                        //mtx_w.unlock();
                         do_write();
-                    } else {
-                        mtx_r.lock();
+			return;
+		}
+	            else	
                         output_shell(session, line.c_str());
-                        mtx_r.unlock();
-                        do_read();
-                    }
                 }
+		//do_read();
             }
 	        else if (ec == boost::asio::error::eof)
 	        {
 		        //output_shell(session, ec.message().c_str());
-	        	mtx_w.unlock();
+	        	//mtx_w.unlock();
+			output_shell(session, "stop eof");
                 boost::asio::post(io_context_, [this]() { socket.close(); });
                 cs_.stop(self);
                 return;
@@ -109,10 +126,11 @@ void client::do_read()
             else
 	        {
                 output_shell(session, ec.message().c_str());
+			cs_.stop_all();
 		        socket.close();
+			output_shell(session, to_string(self.use_count()).c_str());
 	        }
-        memset(data_, 0, max_length);
-    });
+            });
 }
 
 void client::do_write()
@@ -121,19 +139,19 @@ void client::do_write()
     string cmd = cmd_list[idx++];
     
     if (cmd.empty()) {
-        mtx_w.lock();
+        //mtx_w.lock();
         output_command(session, "</br>");    
-        mtx_w.unlock();
+        //mtx_w.unlock();
 	    do_write();
     } else {
-        mtx_w.lock();
+        //mtx_w.lock();
         output_command(session, cmd.c_str());
         socket.async_send(
             boost::asio::buffer((cmd + "\n").c_str(), 1 + strlen(cmd.c_str())),
             [this, self, &cmd](boost::system::error_code ec, size_t _) {
                 if (!ec) {
                     output_command(session, "</br>");
-                    mtx_r.unlock();
+                    //mtx_r.unlock();
                     do_read();
                 }
 		else
@@ -246,7 +264,7 @@ int main ()
     client_set cs;
     //set<shared_ptr<client> > clients;
     for (int i = 0; i < query_parse.get_num(); i++) {
-        auto ptr = make_shared<client>(io_context_, "s" + to_string(i), query_parse.get_attri("h" + to_string(i)),\
+        auto ptr = make_shared<client>(io_context_, cs,"s" + to_string(i), query_parse.get_attri("h" + to_string(i)),\
 		 query_parse.get_attri("p" + to_string(i)), query_parse.get_attri("f" + to_string(i)));
         cs.start(ptr);
         //clients.insert(ptr);

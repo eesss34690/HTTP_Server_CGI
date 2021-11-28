@@ -1,3 +1,5 @@
+#ifndef _CLIENT_HPP
+#define _CLIENT_HPP
 #include <boost/asio.hpp>
 #include <boost/array.hpp>
 #include <boost/thread/mutex.hpp>
@@ -36,5 +38,6 @@ private:
 public:
     client(boost::asio::io_context& io_context, client_set& cs, string s, string h, string p, string f);
     void start();
-
+    void stop(){boost::asio::post(io_context_, [this]() { socket.close(); });}
 };
+#endif
