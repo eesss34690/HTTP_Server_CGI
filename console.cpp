@@ -74,7 +74,8 @@ void client::start()
 void client::do_read()
 {
     auto self(shared_from_this());
-    mtx.lock();
+    mtx_r.lock();
+    memset(data_, 0, max_length);
     socket.async_read_some(
         boost::asio::buffer(data_, max_length),
         [this, self](const boost::system::error_code& ec, size_t length) {
@@ -85,8 +86,8 @@ void client::do_read()
                 if (line[0] == '%' && line[1] == ' ')
                 {
                     output_command(session, line.c_str());
-                    memset(data_, 0, max_length);
-                    mtx.unlock();
+                    //memset(data_, 0, max_length);
+                    mtx_w.unlock();
                     do_write();
                     return;
                 }
@@ -102,8 +103,9 @@ void client::do_read()
                     if (line[0] == '%' && line[1] == ' ')
                     {
                         output_command(session, line.c_str());
-			            memset(data_, 0, max_length);
-                        mtx.unlock();
+		        //memset(data_, 0, max_length);
+                        output_command(session, "next!");
+                        mtx_w.unlock();
                         do_write();
                         return;
                     }
@@ -114,7 +116,7 @@ void client::do_read()
 	        else if (ec == boost::asio::error::eof)
 	        {
 		        //output_shell(session, ec.message().c_str());
-	        	mtx.unlock();
+	        	mtx_w.unlock();
 			    output_shell(session, "stop eof");
                 boost::asio::post(io_context_, [this]() { socket.close(); });
                 cs_.stop(self);
@@ -133,7 +135,7 @@ void client::do_read()
 void client::do_write()
 {
     auto self(shared_from_this());
-    mtx.lock();
+    mtx_w.lock();
     string cmd = cmd_list[idx++];
     
     output_command(session, cmd.c_str());
@@ -142,7 +144,7 @@ void client::do_write()
         boost::asio::buffer((cmd + "\n").c_str(), 1 + strlen(cmd.c_str())),
         [this, self](boost::system::error_code ec, size_t _) {
             if (!ec) {
-                mtx.unlock();
+                mtx_r.unlock();
                 do_read();
             }
 		    else
