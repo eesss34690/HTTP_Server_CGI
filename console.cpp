@@ -87,13 +87,13 @@ void client::do_read()
                     do_read();
                 
             }
-	        else
-	        {
-                output_shell(session, ec.message());
-			    cs_.stop_all();
-		        socket.close();
-			    output_shell(session, to_string(self.use_count()));
-	        }
+	        //else
+	        //{
+                //output_shell(session, ec.message());
+			    //cs_.stop_all();
+		        //socket.close();
+			    //output_shell(session, to_string(self.use_count()));
+	        //}
         });
 }
 
@@ -139,8 +139,8 @@ void cgi_parser::parser()
         end = env.find('&', start);
     }
     mid = env.find('=', start);
-    if (end - mid == 1)
-        query_big[env.substr(start, mid - start)] = env.substr(mid + 1, end - mid - 1);
+    if (env.length() - mid != 1)
+        query_big[env.substr(start, mid - start)] = env.substr(mid + 1, env.length() - mid - 1);
 }
 
 int main ()
