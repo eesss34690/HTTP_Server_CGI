@@ -14,7 +14,7 @@ class single_conn
  : public enable_shared_from_this<single_conn> {
 private:
     tcp::socket socket_;
-    enum { max_length = 1024 };
+    enum { max_length = 15000 };
     char data_[max_length];
     map<string, string> header;
     connection& cn_;

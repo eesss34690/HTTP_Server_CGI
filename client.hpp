@@ -24,7 +24,7 @@ private:
     vector<string> cmd_list;
     int idx;
 
-    enum { max_length = 1024 };
+    enum { max_length = 15000 };
     array<char, max_length> data_;
 
     boost::asio::ip::tcp::socket socket;
