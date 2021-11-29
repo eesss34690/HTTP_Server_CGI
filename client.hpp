@@ -25,14 +25,12 @@ private:
     int idx;
 
     enum { max_length = 1024 };
-    char data_[max_length];
+    array<char, max_length> data_;
 
     boost::asio::ip::tcp::socket socket;
     boost::asio::ip::tcp::resolver resolver;
     boost::asio::io_context& io_context_;
 
-    boost::mutex mtx_r;
-    boost::mutex mtx_w;
     void do_read();
     void do_write();
 public:
