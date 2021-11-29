@@ -80,14 +80,11 @@ void client::do_read()
 	        if (!ec) {
                 string line = data_.data();
                 data_.fill('\0');
-                if (line[0] == '%' && line[1] == ' ')
-                {
+                output_shell(session, line);
+                if (line.find("% ") != -1)
                     do_write();
-                }
                 else
-                {
                     do_read();
-                }
                 
             }
 	        else
